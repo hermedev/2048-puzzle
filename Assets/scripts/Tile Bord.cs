@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class TileBord : MonoBehaviour
 {
@@ -12,7 +13,8 @@ public class TileBord : MonoBehaviour
     private TileGrid grid;
     private List<Tile> tiles;
     private bool waiting;
-    private Vector2 touchStartPos;
+    private Vector2 pointerStartPos;
+    private bool pointerGestureActive;
     public float swipeThreshold = 50f;
     private void Awake()
     {
@@ -42,78 +44,120 @@ public class TileBord : MonoBehaviour
     {
         if (!waiting)
         {
-            HandleMobhileInput();
-            HandleSwipeInput();
+            HandleKeyboardInput();
+            HandleTouchInput();
+            HandleMouseInput();
         }
 
     }
-    void HandleMobhileInput()
+    private void HandleKeyboardInput()
     {
-        //laptopinput
-        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null)
         {
-            movetiles(Vector2Int.up, 0, 1, 1, 1);
+            return;
         }
-        else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
-        {
-            movetiles(Vector2Int.down, 0, 1, grid.hight - 2, -1);
-        }
-        else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
-        {
-            movetiles(Vector2Int.left, 1, 1, 0, 1);
-        }
-        else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
-        {
-            movetiles(Vector2Int.right, grid.hight - 2, -1, 0, 1);
 
+        if (keyboard.wKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame)
+        {
+            MoveInDirection(Vector2Int.up);
+        }
+        else if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame)
+        {
+            MoveInDirection(Vector2Int.down);
+        }
+        else if (keyboard.aKey.wasPressedThisFrame || keyboard.leftArrowKey.wasPressedThisFrame)
+        {
+            MoveInDirection(Vector2Int.left);
+        }
+        else if (keyboard.dKey.wasPressedThisFrame || keyboard.rightArrowKey.wasPressedThisFrame)
+        {
+            MoveInDirection(Vector2Int.right);
         }
     }
-    //MobhileInput
-    private void HandleSwipeInput()
+
+    private void HandleTouchInput()
     {
-        if (Input.touchCount > 0)
+        Touchscreen touchscreen = Touchscreen.current;
+        if (touchscreen == null)
         {
-            Touch touch = Input.GetTouch(0);
+            return;
+        }
 
-            if (touch.phase == TouchPhase.Began)
+        foreach (var touch in touchscreen.touches)
+        {
+            if (touch.press.wasPressedThisFrame)
             {
-                touchStartPos = touch.position;
+                pointerStartPos = touch.position.ReadValue();
+                pointerGestureActive = true;
             }
-            else if (touch.phase == TouchPhase.Ended)
+
+            if (pointerGestureActive && touch.press.wasReleasedThisFrame)
             {
-                Vector2 touchEndPos = touch.position;
-                Vector2 swipeDelta = touchEndPos - touchStartPos;
-
-                if (swipeDelta.magnitude >= swipeThreshold)
-                {
-                    Vector2 swipeDirection = swipeDelta.normalized;
-
-                    if (Mathf.Abs(swipeDirection.x) > Mathf.Abs(swipeDirection.y))
-                    {
-                        // Horizontal swipe
-                        if (swipeDirection.x > 0)
-                        {
-                            movetiles(Vector2Int.right, grid.hight - 2, -1, 0, 1);
-                        }
-                        else
-                        {
-                            movetiles(Vector2Int.left, 1, 1, 0, 1);
-                        }
-                    }
-                    else
-                    {
-                        // Vertical swipe
-                        if (swipeDirection.y > 0)
-                        {
-                            movetiles(Vector2Int.up, 0, 1, 1, 1);
-                        }
-                        else
-                        {
-                            movetiles(Vector2Int.down, 0, 1, grid.hight - 2, -1);
-                        }
-                    }
-                }
+                Vector2 endPosition = touch.position.ReadValue();
+                pointerGestureActive = false;
+                TryMoveFromSwipe(pointerStartPos, endPosition);
+                return;
             }
+        }
+    }
+
+    private void HandleMouseInput()
+    {
+        Mouse mouse = Mouse.current;
+        if (mouse == null)
+        {
+            return;
+        }
+
+        if (mouse.leftButton.wasPressedThisFrame)
+        {
+            pointerStartPos = mouse.position.ReadValue();
+            pointerGestureActive = true;
+        }
+        else if (pointerGestureActive && mouse.leftButton.wasReleasedThisFrame)
+        {
+            Vector2 endPosition = mouse.position.ReadValue();
+            pointerGestureActive = false;
+            TryMoveFromSwipe(pointerStartPos, endPosition);
+        }
+    }
+
+    private void TryMoveFromSwipe(Vector2 startPosition, Vector2 endPosition)
+    {
+        Vector2 swipeDelta = endPosition - startPosition;
+        if (swipeDelta.magnitude < swipeThreshold)
+        {
+            return;
+        }
+
+        if (Mathf.Abs(swipeDelta.x) > Mathf.Abs(swipeDelta.y))
+        {
+            MoveInDirection(swipeDelta.x > 0 ? Vector2Int.right : Vector2Int.left);
+        }
+        else
+        {
+            MoveInDirection(swipeDelta.y > 0 ? Vector2Int.up : Vector2Int.down);
+        }
+    }
+
+    private void MoveInDirection(Vector2Int direction)
+    {
+        if (direction == Vector2Int.up)
+        {
+            movetiles(direction, 0, 1, 1, 1);
+        }
+        else if (direction == Vector2Int.down)
+        {
+            movetiles(direction, 0, 1, grid.hight - 2, -1);
+        }
+        else if (direction == Vector2Int.left)
+        {
+            movetiles(direction, 1, 1, 0, 1);
+        }
+        else if (direction == Vector2Int.right)
+        {
+            movetiles(direction, grid.width - 2, -1, 0, 1);
         }
     }
     private void movetiles(Vector2Int directtion, int startindeX, int incrementX, int startindeY, int incrementY)
