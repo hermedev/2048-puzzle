@@ -2,6 +2,12 @@
 
 A Unity implementation of the classic 2048 sliding tile puzzle. Combine equal numbered tiles, grow their values, and try to reach 2048. The project is configured for WebGL and uses Unity's Input System.
 
+## Play online
+
+- [Play the WebGL build](https://hermedev.github.io/2048-puzzle-play/)
+- [WebGL build repository](https://github.com/hermedev/2048-puzzle-play)
+- [Unity source project](https://github.com/hermedev/2048-puzzle.git)
+
 ## Features
 
 - 4x4 tile board with movement, merging, and score tracking
@@ -57,3 +63,5 @@ ProjectSettings/          Unity project and build settings
 - Score and best score are stored in the browser/device's local player preferences. They are not synchronized between devices or browsers.
 - The project includes the Code Assist editor plugin under `Assets/Plugins/CodeAssist`.
 - Generated Unity folders such as `Library`, `Temp`, and `Builds` are excluded through `.gitignore`.
+- Desktop and mobile WebGL build profiles are included under `Assets/Settings/Build Profiles`.
+- Automated tests, release/build instructions for the hosted copy, and verified browser/device compatibility are not currently documented. Add these details if they are available and relevant to contributors.
